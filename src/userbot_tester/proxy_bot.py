@@ -6,8 +6,7 @@ from dataclasses import dataclass
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
-
-from userbot_tester.mtproto import MTProtoBotChat
+from userbot_tester.mtproto import MTProtoBotChat, keep_only_fio_phone_email_masked
 
 log = logging.getLogger("proxy_bot")
 
@@ -23,70 +22,82 @@ def build_proxy_dispatcher(
     settings: ProxySettings,
 ) -> Dispatcher:
     dp = Dispatcher()
-    send_lock = asyncio.Lock()  # чтобы ответы не перемешивались
+    send_lock = asyncio.Lock()
 
     @dp.message(F.text)
     async def relay_text(message: Message):
         if settings.private_only and message.chat.type != "private":
             return
 
-        text = (message.text or "").strip()
-        if not text:
+        user_text = (message.text or "").strip()
+        if not user_text:
             return
 
-        # команды прокси-бота
-        if text in ("/start", "/help"):
+        if user_text in ("/start", "/help"):
             await message.answer(
                 "Прокси-бот готов.\n"
-                "Напиши ИНН/текст — я отправлю целевому боту команду:\n"
-                "/inn <твой текст>\n\n"
-                "После ответа я автоматически нажму нижнюю кнопку (ФИО) во 2-м сообщении "
-                "и верну ссылку на сайт.\n\n"
-                "Команды:\n"
-                "/whoami — показать твой user_id\n"
+                "Напиши значение — я отправлю целевому боту команду /inn <значение>,\n"
+                "дождусь редактирования (появления 2 кнопок), нажму нижнюю кнопку.\n"
+                "Если придёт сообщение '📄 Краткая сводка' — перешлю его в замаскированном виде."
             )
             return
 
-        if text == "/whoami":
-            await message.answer(f"Ваш user_id: {message.from_user.id}")
-            return
-
-        target_text = f"/inn {text}"
+        target_text = f"/inn {user_text}"
         await message.answer(f"⏳ Отправляю: {target_text}")
 
         async with send_lock:
+            # 1) /inn -> первый ответ
             try:
                 first = await chat.send_text_and_wait(target_text)
             except Exception as e:
-                log.exception("Relay failed")
-                await message.answer(f"❌ Ошибка при запросе /inn: {e}")
+                log.exception("Error sending /inn")
+                await message.answer(f"❌ Ошибка запроса: {e}")
                 return
 
-            # покажем текст первого ответа (по желанию)
             if first.text:
                 await message.answer(first.text)
 
-            # ждём, пока это же сообщение будет отредактировано и появятся 2 кнопки
+            # 2) ждём edit первого ответа (появятся 2 кнопки)
             try:
                 edited = await chat.wait_message_edit_until(
                     first.message,
-                    min_buttons=2,      # у тебя “вторая кнопка” появляется после edit
-                    timeout=12.0,
-                    quiet_timeout=2.0,
+                    min_buttons=2,
+                    timeout=15.0,
+                    quiet_timeout=2.5,
                 )
             except Exception as e:
-                log.exception("Wait edit failed")
-                await message.answer(f"❌ Не смог дождаться редактирования сообщения: {e}")
+                log.exception("Edit wait failed")
+                await message.answer(f"❌ Не дождался редактирования: {e}")
                 return
 
-            # теперь работаем с отредактированным сообщением
+            # 3) кликаем нижнюю кнопку и собираем ответы/редактирования
             try:
-                url = await chat.open_bottom_button_url(edited)
+                msgs = await chat.click_bottom_button_and_collect(
+                    edited,
+                    collect_timeout=15.0,
+                    idle_timeout=2.5,
+                    max_events=12,
+                )
             except Exception as e:
-                log.exception("Open bottom button failed")
-                await message.answer(f"❌ Не смог открыть нижнюю кнопку/достать ссылку: {e}")
+                log.exception("Click/collect failed")
+                await message.answer(f"❌ Ошибка после нажатия кнопки: {e}")
                 return
 
-        await message.answer(f"🔗 Ссылка: {url}")
+        # 4) ищем именно "📄 Краткая сводка"
+        summary_msg = chat.find_summary_message(msgs)
+        if not summary_msg:
+            # на всякий случай покажем, что что-то пришло
+            texts = [((m.message or "").strip()) for m in msgs if (m.message or "").strip()]
+            if texts:
+                await message.answer("Получены сообщения после клика, но '📄 Краткая сводка' не найдена.")
+                # можно вывести последнее (тоже лучше с маской)
+                await message.answer(keep_only_fio_phone_email_masked(texts[-1]))
+            else:
+                await message.answer("После клика не удалось получить текстовые сообщения.")
+            return
+
+        # 5) пересылаем пользователю, но с маскировкой PII
+        raw_text = (summary_msg.message or "").strip()
+        await message.answer(keep_only_fio_phone_email_masked(raw_text))
 
     return dp
