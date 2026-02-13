@@ -1,0 +1,4 @@
+telethon==1.34.0
+python-dotenv==1.0.1
+aiogram==3.7.0
+typing-extensions>=4.8.0

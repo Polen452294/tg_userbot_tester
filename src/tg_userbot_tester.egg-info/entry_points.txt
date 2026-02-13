@@ -1,0 +1,2 @@
+[console_scripts]
+userbot-tester = userbot_tester.main:main

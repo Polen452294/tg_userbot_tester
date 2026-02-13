@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.env
+*.session
+*.session-journal
+
+.dist/
+.build/
+.venv/
+.idea/
+.vscode/
