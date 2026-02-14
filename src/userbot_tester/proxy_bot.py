@@ -50,8 +50,8 @@ def build_proxy_dispatcher(
 
         if user_text in ("/start", "/help"):
             await message.answer(
-                "Бот готов.\n\n"
-                "Вводи так:\n"
+                "Бот готов.\n"
+                "Вводи данные так:\n"
                 "ИНН; ФИО\n\n"
                 "Пример:\n"
                 "2222058686; Маркова Ольга Викторовна\n\n"
@@ -65,7 +65,7 @@ def build_proxy_dispatcher(
 
         inn, fio = parsed
         target_text = f"/inn {inn}"
-        await message.answer(f"⏳ Отправляю: {target_text}\nИщу: {fio}")
+        await message.answer(f"Ищу: {fio}...")
 
         async with send_lock:
             # 1) /inn -> первый ответ
@@ -107,9 +107,9 @@ def build_proxy_dispatcher(
                     edited,
                     i=i,
                     j=j,
-                    collect_timeout=18.0,
-                    idle_timeout=3.0,
-                    max_events=15,
+                    collect_timeout=4,
+                    idle_timeout=0.8,
+                    max_events=5,
                 )
             except Exception as e:
                 log.exception("Click/collect failed")
