@@ -91,48 +91,45 @@ ERROR --- Иная ошибка
 # 🚀 ЗАПУСК С ЛОКАЛЬНОГО УСТРОЙСТВА
 
 ### 1. Создать виртуальное окружение
+cd "путь к репозиторию с кодом"
+(при первом заупске) Python -m venv .venv (source .venv/bin/activate для Linux / Mac)
 
-python -m venv .venv\
-source .venv/bin/activate (Linux / Mac)
-
-Windows:\
-.venv`\Scripts`{=tex}`\activate`{=tex}
-
+.venv\Scripts\activate
 ### 2. Установить зависимости
 
-pip install -r requirements.txt
+(при первом заупске) pip install -r requirements.txt
 
 ### 3. Создать файл `.env`
 
-TG_API_ID=\
-TG_API_HASH=\
-TG_SESSION_NAME=me\
-BOT_USERNAME=@target_bot_username\
+TG_API_ID=
+TG_API_HASH=
+TG_SESSION_NAME=me
+BOT_USERNAME=@target_bot_username
 CONTROL_BOT_TOKEN=
 
 ### 4. Запустить бота
 
-python -m userbot_tester.main
+userbot-tester
 
 ------------------------------------------------------------------------
 
 # 🖥 ЗАПУСК НА СЕРВЕРЕ
 
 1.  Клонировать проект:\
-    git clone `<repo>`{=html}\
-    cd `<repo>`{=html}
+    git clone https://github.com/Polen452294/Company_Parser.git
+    cd "путь к репозиторию с кодом"
 
-2.  Создать виртуальное окружение:\
+2.  Создать виртуальное окружение:
     python3 -m venv .venv\
     source .venv/bin/activate
 
-3.  Установить зависимости:\
+4.  Установить зависимости:\
     pip install -r requirements.txt
 
-4.  Создать `.env`
+5.  Создать `.env`
 
-5.  Запустить:\
-    python -m userbot_tester.main
+6.  Запустить:\
+    python -m userbot_tester.main или userbot-tester
 
 ------------------------------------------------------------------------
 
