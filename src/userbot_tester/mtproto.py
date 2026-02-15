@@ -64,6 +64,33 @@ def keep_only_fio_phone_email_masked(text: str) -> str:
 
     return "\n".join(lines)
 
+EMAIL_LINE_RE = re.compile(r"^(Email|E-mail|Почта):\s*(.+)$", re.MULTILINE | re.IGNORECASE)
+
+def parse_summary_fields(text: str) -> dict[str, str]:
+    """
+    Достаёт ФИО/Телефон/Email из текста "📄 Краткая сводка".
+    Возвращает пустые строки, если не найдено.
+    """
+    src = text or ""
+    fio = ""
+    phone = ""
+    email = ""
+
+    m = FIO_RE.search(src)
+    if m:
+        fio = m.group(1).strip()
+
+    m = PHONE_LINE_RE.search(src)
+    if m:
+        phone = (m.group(1) or "").strip()
+
+    m = EMAIL_LINE_RE.search(src)
+    if m:
+        # группа 2, потому что группа 1 — название поля
+        email = (m.group(2) or "").strip()
+
+    return {"fio": fio, "phone": phone, "email": email}
+
 
 @dataclass
 class BotReply:
@@ -370,3 +397,12 @@ class MTProtoBotChat:
             if t.startswith(SUMMARY_MARKER) or (SUMMARY_MARKER in t):
                 return m
         return None
+    
+def is_not_found_message(text: str) -> bool:
+    t = (text or "").strip().lower()
+    # фразы можно расширять по твоим наблюдениям
+    return (
+        "ничего не найдено" in t
+        or "по данному запросу ничего не найдено" in t
+        or "ничего не найден" in t
+    )
